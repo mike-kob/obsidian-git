@@ -627,3 +627,47 @@
     background: var(--interactive-hover);
     color: var(--text-accent-hover);
 }
+
+/* ====================== File Tree Status Indicators ====================== */
+
+/* Ensure tree-item-inner uses flexbox for proper badge positioning */
+.tree-item-self[data-git-status] .tree-item-inner {
+    display: flex !important;
+    align-items: center;
+    width: 100%;
+}
+
+/* Status badge styling - matches .git-tools .type style */
+.obsidian-git-status-badge {
+    padding-left: var(--size-2-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 11px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Modified files (M) - Orange */
+.obsidian-git-status-badge[data-status="M"] {
+    color: #bca579;
+}
+.tree-item-self[data-git-status="M"] .tree-item-inner {
+    color: #ebcb8b
+}
+
+/* Untracked files (U) - Light Green */
+.obsidian-git-status-badge[data-status="U"] {
+    color: #8ba281;
+}
+.tree-item-self[data-git-status="U"] .tree-item-inner {
+    color: #a3be8c;
+}
+
+/* Added/Staged files (A) - Strong Green */
+.obsidian-git-status-badge[data-status="A"] {
+    color: #6d9779;
+}
+.tree-item-self[data-git-status="A"] .tree-item-inner {
+    color: #81b98b;
+}

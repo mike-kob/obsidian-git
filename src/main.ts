@@ -14,6 +14,7 @@ import {
 } from "obsidian";
 import * as path from "path";
 import { LineAuthoringFeature } from "src/lineAuthor/lineAuthorIntegration";
+import { FileTreeStatusFeature } from "src/fileTreeStatus";
 import { pluginRef } from "src/pluginGlobalRef";
 import { PromiseQueue } from "src/promiseQueue";
 import { ObsidianGitSettingsTab } from "src/setting/settings";
@@ -88,6 +89,7 @@ export default class ObsidianGit extends Plugin {
     lastDiffViewState: Record<string, unknown> | undefined;
     intervalsToClear: number[] = [];
     lineAuthoringFeature: LineAuthoringFeature = new LineAuthoringFeature(this);
+    fileTreeStatusFeature: FileTreeStatusFeature = new FileTreeStatusFeature(this);
 
     /**
      * Debouncer for the refresh of the git status for the source control view after file changes.
@@ -127,11 +129,13 @@ export default class ObsidianGit extends Plugin {
             HISTORY_VIEW_CONFIG.type
         );
 
-        if (
+        const shouldRefresh =
             this.settings.changedFilesInStatusBar ||
+            this.settings.showFileTreeStatus ||
             gitViews.some((leaf) => !(leaf.isDeferred ?? false)) ||
-            historyViews.some((leaf) => !(leaf.isDeferred ?? false))
-        ) {
+            historyViews.some((leaf) => !(leaf.isDeferred ?? false));
+
+        if (shouldRefresh) {
             await this.updateCachedStatus().catch((e) => this.displayError(e));
         }
 
@@ -498,6 +502,7 @@ export default class ObsidianGit extends Plugin {
         this.gitReady = false;
 
         this.lineAuthoringFeature.deactivateFeature();
+        this.fileTreeStatusFeature.deactivate();
         this.automaticsManager.unload();
         this.branchBar?.remove();
         this.statusBar?.remove();
@@ -597,6 +602,8 @@ export default class ObsidianGit extends Plugin {
                     await this.branchBar?.display();
 
                     this.lineAuthoringFeature.conditionallyActivateBySettings();
+
+                    this.fileTreeStatusFeature.conditionallyActivateBySettings();
 
                     this.app.workspace.trigger("obsidian-git:refresh");
                     /// Among other things, this notifies the history view that git is ready

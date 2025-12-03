@@ -456,6 +456,31 @@ export class ObsidianGitSettingsTab extends PluginSettingTab {
             }
         }
 
+        new Setting(containerEl).setName("New features").setHeading();
+
+        new Setting(containerEl)
+            .setName("Show file tree status indicators")
+            .setDesc(
+                "Display git status badges (M/U/A) and colors in the file explorer tree."
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(plugin.settings.showFileTreeStatus)
+                    .onChange(async (value) => {
+                        plugin.settings.showFileTreeStatus = value;
+                        await plugin.saveSettings();
+                        if (value) {
+                            plugin.fileTreeStatusFeature.activate();
+                            // Trigger a status update to populate the tree
+                            if (plugin.gitReady) {
+                                await plugin.updateCachedStatus();
+                            }
+                        } else {
+                            plugin.fileTreeStatusFeature.deactivate();
+                        }
+                    })
+            );
+
         new Setting(containerEl).setName("History view").setHeading();
 
         new Setting(containerEl)

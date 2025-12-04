@@ -6,6 +6,8 @@
     import { onMount } from "svelte";
     import LogComponent from "./components/logComponent.svelte";
     import type HistoryView from "./historyView";
+    import SplitDiffView from "../diff/splitDiffView";
+    import DiffView from "../diff/diffView";
 
     interface Props {
         plugin: ObsidianGit;
@@ -17,6 +19,10 @@
     let buttons: HTMLElement[] = $state([]);
     let logs: LogEntry[] | undefined = $state();
     let showTree: boolean = $state(plugin.settings.treeStructure);
+    let showCurrentFileOnly: boolean = $state(
+        plugin.localStorage.getHistoryShowCurrentFileOnly()
+    );
+    let currentFilePath: string | undefined = $state();
 
     let layoutBtn: HTMLElement | undefined = $state();
 
@@ -32,6 +38,20 @@
                 "obsidian-git:head-change",
                 () => void refresh().catch(console.error)
             )
+        );
+        view.registerEvent(
+            view.app.workspace.on("file-open", () => {
+                if (showCurrentFileOnly) {
+                    const splitDiffView =
+                        view.app.workspace.getActiveViewOfType(SplitDiffView);
+                    const diffView =
+                        view.app.workspace.getActiveViewOfType(DiffView);
+
+                    if (splitDiffView === null && diffView === null) {
+                        void refresh().catch(console.error);
+                    }
+                }
+            })
         );
     });
 
@@ -61,6 +81,14 @@
         refresh().catch(console.error);
     }
 
+    function toggleFileFilter() {
+        showCurrentFileOnly = !showCurrentFileOnly;
+        plugin.localStorage.setHistoryShowCurrentFileOnly(showCurrentFileOnly);
+        // Reset logs when toggling filter to start fresh
+        logs = undefined;
+        refresh().catch(console.error);
+    }
+
     async function refresh() {
         if (!plugin.gitReady) {
             logs = undefined;
@@ -74,20 +102,41 @@
         } else {
             limit = logs!.length;
         }
-        logs = await plugin.gitManager.log(undefined, false, limit);
+        let filePath: string | undefined;
+        if (showCurrentFileOnly) {
+            const activeFile = view.app.workspace.getActiveFile();
+            if (activeFile) {
+                currentFilePath = activeFile.path;
+                filePath = currentFilePath;
+            } else {
+                currentFilePath = undefined;
+                logs = [];
+                loading = false;
+                return;
+            }
+        } else {
+            currentFilePath = undefined;
+        }
+        logs = await plugin.gitManager.log(filePath, true, limit);
         loading = false;
     }
 
     async function appendLogs() {
-        if (!plugin.gitReady || logs === undefined) {
+        if (!plugin.gitReady || logs === undefined || logs.length === 0) {
             return;
         }
+        if (showCurrentFileOnly && !currentFilePath) {
+            return;
+        }
+        
         loading = true;
         const isSimpleGit = plugin.gitManager instanceof SimpleGit;
         const limit = isSimpleGit ? 50 : 10;
+        const filePath = showCurrentFileOnly ? currentFilePath : undefined;
+        
         const newLogs = await plugin.gitManager.log(
-            undefined,
-            false,
+            filePath,
+            true,
             limit,
             logs.last()?.hash
         );
@@ -117,6 +166,15 @@
                 }}
             ></div>
             <div
+                id="fileFilter"
+                class="clickable-icon nav-action-button"
+                class:is-active={showCurrentFileOnly}
+                data-icon="file"
+                aria-label="Show history for current file only"
+                bind:this={buttons[2]}
+                onclick={toggleFileFilter}
+            ></div>
+            <div
                 id="refresh"
                 class="clickable-icon nav-action-button"
                 class:loading
@@ -127,12 +185,22 @@
             ></div>
         </div>
     </div>
-
+    {#if showCurrentFileOnly && currentFilePath}
+        <div class="git-history-filter-info">
+            History for <span class="git-history-filename">{currentFilePath}</span>
+        </div>
+    {/if}
     <div class="nav-files-container" style="position: relative;">
         {#if logs}
             <div class="tree-item nav-folder mod-root">
                 {#each logs as log}
-                    <LogComponent {view} {showTree} {log} {plugin} />
+                    <LogComponent
+                        {view}
+                        {showTree}
+                        {log}
+                        {plugin}
+                        isFiltered={showCurrentFileOnly}
+                    />
                 {/each}
             </div>
         {/if}
@@ -143,4 +211,17 @@
 </main>
 
 <style lang="scss">
+    .git-history-filter-info {
+        padding: 0 12px 8px;
+        font-size: var(--font-ui-smaller);
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--background-modifier-border);
+        background-color: var(--background-secondary);
+        text-align: center;
+    }
+
+    .git-history-filename {
+        color: var(--text-normal);
+        font-weight: var(--font-semibold);
+    }
 </style>

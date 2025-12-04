@@ -13,14 +13,23 @@
         view: HistoryView;
         showTree: boolean;
         plugin: ObsidianGit;
+        isFiltered: boolean;
     }
 
-    let { log, view, showTree, plugin }: Props = $props();
+    let { log, view, showTree, plugin, isFiltered }: Props = $props();
+    let currentLog = $state(log);
+    let showingFullDiff = $state(false);
+    let loadingFullDiff = $state(false);
+
+    $effect(() => {
+        currentLog = log;
+        showingFullDiff = false;
+    });
     let logsHierarchy = $derived({
         title: "",
         path: "",
         vaultPath: "",
-        children: plugin.gitManager.getTreeStructure(log.diff.files),
+        children: plugin.gitManager.getTreeStructure(currentLog.diff.files),
     });
 
     let side = $derived(getTooltipSide(view.leaf));
@@ -37,6 +46,28 @@
             return words.map((word) => word[0]!.toUpperCase()).join("");
         }
         return "";
+    }
+
+    async function loadFullDiff() {
+        if (loadingFullDiff || showingFullDiff) return;
+
+        loadingFullDiff = true;
+        try {
+            const fullLogs = await plugin.gitManager.log(
+                undefined,
+                false,
+                1,
+                log.hash
+            );
+            if (fullLogs.length > 0) {
+                currentLog = fullLogs[0];
+                showingFullDiff = true;
+            }
+        } catch (error) {
+            console.error("Failed to load full diff:", error);
+        } finally {
+            loadingFullDiff = false;
+        }
     }
 </script>
 
@@ -108,9 +139,20 @@ ${log.message}`}
                         bind:closed
                     />
                 {:else}
-                    {#each log.diff.files as file}
+                    {#each currentLog.diff.files as file}
                         <LogFileComponent {view} diff={file} />
                     {/each}
+                {/if}
+                {#if isFiltered && !showingFullDiff && currentLog.diff.files.length > 0}
+                    <div class="git-history-show-full">
+                        <button
+                            class="git-history-show-full-button"
+                            onclick={loadFullDiff}
+                            disabled={loadingFullDiff}
+                        >
+                            {loadingFullDiff ? "Loading..." : "Show full diff"}
+                        </button>
+                    </div>
                 {/if}
             </div>
         {/if}
@@ -118,4 +160,29 @@ ${log.message}`}
 </main>
 
 <style lang="scss">
+.git-history-show-full {
+    padding: 0 0 4px 24px;
+    font-size: var(--font-ui-smaller);
+}
+
+.git-history-show-full-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-faint);
+    cursor: pointer;
+    text-decoration: none;
+    font-size: var(--font-ui-smaller);
+    box-shadow: none;
+    height: 16px;
+
+    &:hover {
+        text-decoration: underline;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
 </style>

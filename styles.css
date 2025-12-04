@@ -122,6 +122,12 @@
     color: var(--nav-item-color-active);
 }
 
+/* Highlight the file filter button when active */
+.nav-action-button.is-active {
+    color: var(--interactive-accent);
+    background-color: var(--background-modifier-hover);
+}
+
 .git-author {
     color: var(--text-accent);
 }

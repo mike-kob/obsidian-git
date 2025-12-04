@@ -23,6 +23,7 @@
         plugin.localStorage.getHistoryShowCurrentFileOnly()
     );
     let currentFilePath: string | undefined = $state();
+    let currentFileName = $derived(currentFilePath?.split('/').last());
     let refreshRef: EventRef;
     let fileOpenRef: EventRef;
 
@@ -201,7 +202,7 @@
     </div>
     {#if showCurrentFileOnly && currentFilePath}
         <div class="git-history-filter-info">
-            History for <span class="git-history-filename">{currentFilePath}</span>
+            History for <span class="git-history-filename">{currentFileName}</span>
         </div>
     {/if}
     <div class="nav-files-container" style="position: relative;">

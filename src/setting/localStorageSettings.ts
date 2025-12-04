@@ -154,4 +154,19 @@ export class LocalStorageSettings {
             `${value}`
         );
     }
+
+    getHistoryShowCurrentFileOnly(): boolean {
+        return (
+            this.app.loadLocalStorage(
+                this.prefix + "historyShowCurrentFileOnly"
+            ) == "true"
+        );
+    }
+
+    setHistoryShowCurrentFileOnly(value: boolean): void {
+        return this.app.saveLocalStorage(
+            this.prefix + "historyShowCurrentFileOnly",
+            `${value}`
+        );
+    }
 }

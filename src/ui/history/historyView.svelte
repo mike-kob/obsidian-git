@@ -129,12 +129,12 @@
         if (showCurrentFileOnly && !currentFilePath) {
             return;
         }
-        
+
         loading = true;
         const isSimpleGit = plugin.gitManager instanceof SimpleGit;
         const limit = isSimpleGit ? 50 : 10;
         const filePath = showCurrentFileOnly ? currentFilePath : undefined;
-        
+
         const newLogs = await plugin.gitManager.log(
             filePath,
             true,
@@ -188,7 +188,9 @@
     </div>
     {#if showCurrentFileOnly && currentFilePath}
         <div class="git-history-filter-info">
-            History for <span class="git-history-filename">{currentFileName}</span>
+            History for <span class="git-history-filename"
+                >{currentFileName}</span
+            >
         </div>
     {/if}
     <div class="nav-files-container" style="position: relative;">
